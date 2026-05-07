@@ -52,7 +52,7 @@ A self-hosted, encrypted password manager with per-user vaults, admin controls, 
 │  │   └────────────────────┬────────────────────────────┘    │  │
 │  │                        │                                  │  │
 │  │   ┌────────────────────▼────────────────────────────┐    │  │
-│  │   │                MySQL 8.4                        │    │  │
+│  │   │              MariaDB LTS                        │    │  │
 │  │   │                                                  │    │  │
 │  │   │  • app_users  — login credentials               │    │  │
 │  │   │  • users      — encrypted password entries      │    │  │
@@ -70,7 +70,7 @@ A self-hosted, encrypted password manager with per-user vaults, admin controls, 
 | Network | Members | Internet Access |
 |---|---|---|
 | `frontend-net` | nginx | Yes (via host port 8080) |
-| `backend-net` | nginx, backend, mysql | No (internal) |
+| `backend-net` | nginx, backend, mariadb | No (internal) |
 
 ### Request Flow
 
@@ -206,7 +206,7 @@ Copy `.env.example` to `.env` and fill in all values before starting.
 
 | Variable | Description | Example |
 |---|---|---|
-| `MYSQL_ROOT_PASSWORD` | MySQL root password (used by MySQL init only) | `ch@ngeMe_r00t!` |
+| `MYSQL_ROOT_PASSWORD` | MariaDB root password (used by MariaDB init only) | `ch@ngeMe_r00t!` |
 | `MYSQL_DATABASE` | Database name | `password_app` |
 | `MYSQL_USER` | Application DB user | `appuser` |
 | `MYSQL_PASSWORD` | Application DB password | `ch@ngeMe_app!` |
@@ -239,7 +239,7 @@ passWord/
 ├── backend/
 │   ├── src/
 │   │   ├── server.js          # Express app, middleware, routes, admin seed
-│   │   ├── db.js              # MySQL connection pool
+│   │   ├── db.js              # MariaDB connection pool
 │   │   ├── crypto.js          # AES-256-GCM encrypt/decrypt
 │   │   ├── middleware/
 │   │   │   ├── authenticate.js   # JWT verification → req.user
@@ -306,7 +306,7 @@ All `/api/passwords` and `/api/admin` endpoints require `Authorization: Bearer <
 | Clickjacking | `X-Frame-Options: SAMEORIGIN` |
 | MIME sniffing | `X-Content-Type-Options: nosniff` |
 | XSS via CDN | CSP restricts scripts/styles to `self` + `cdn.jsdelivr.net` |
-| DB network exposure | `backend-net` is Docker-internal; MySQL not reachable from host |
+| DB network exposure | `backend-net` is Docker-internal; MariaDB not reachable from host |
 | Container privilege | Backend runs as non-root `appuser` inside the container |
 | Self-deletion by admin | Server rejects `DELETE /api/admin/users/<own-id>` with 400 |
 
