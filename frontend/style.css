@@ -1,0 +1,282 @@
+/* ── Dracula Palette ─────────────────────────────────────────────────── */
+:root {
+  --drac-bg:       #282a36;
+  --drac-surface:  #44475a;
+  --drac-fg:       #f8f8f2;
+  --drac-comment:  #6272a4;
+  --drac-cyan:     #8be9fd;
+  --drac-green:    #50fa7b;
+  --drac-orange:   #ffb86c;
+  --drac-pink:     #ff79c6;
+  --drac-purple:   #bd93f9;
+  --drac-red:      #ff5555;
+  --drac-yellow:   #f1fa8c;
+
+  /* Bootstrap 5 variable overrides */
+  --bs-body-bg:                    var(--drac-bg);
+  --bs-body-color:                 var(--drac-fg);
+  --bs-secondary-color:            var(--drac-comment);
+  --bs-tertiary-color:             var(--drac-comment);
+  --bs-border-color:               var(--drac-surface);
+  --bs-border-color-translucent:   rgba(68, 71, 90, 0.5);
+  --bs-card-bg:                    #21222c;
+  --bs-card-border-color:          var(--drac-surface);
+  --bs-primary:                    var(--drac-purple);
+  --bs-primary-rgb:                189, 147, 249;
+  --bs-success:                    var(--drac-green);
+  --bs-success-rgb:                80, 250, 123;
+  --bs-danger:                     var(--drac-red);
+  --bs-danger-rgb:                 255, 85, 85;
+  --bs-warning:                    var(--drac-yellow);
+  --bs-warning-rgb:                241, 250, 140;
+  --bs-info:                       var(--drac-cyan);
+  --bs-info-rgb:                   139, 233, 253;
+  --bs-link-color:                 var(--drac-purple);
+  --bs-link-hover-color:           var(--drac-pink);
+  --bs-progress-bg:                var(--drac-surface);
+}
+
+/* ── Body ────────────────────────────────────────────────────────────── */
+body {
+  min-height: 100vh;
+  background-color: var(--drac-bg);
+  color: var(--drac-fg);
+}
+
+/* ── Cards ───────────────────────────────────────────────────────────── */
+.card {
+  background-color: #21222c;
+  border-color: var(--drac-surface);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5) !important;
+}
+
+.card-title {
+  color: var(--drac-cyan);
+}
+
+/* ── Form controls ───────────────────────────────────────────────────── */
+.form-control,
+.form-select {
+  background-color: var(--drac-bg);
+  color: var(--drac-fg);
+  border-color: var(--drac-surface);
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: var(--drac-bg);
+  color: var(--drac-fg);
+  border-color: var(--drac-purple);
+  box-shadow: 0 0 0 0.2rem rgba(189, 147, 249, 0.25);
+}
+
+.form-control::placeholder {
+  color: var(--drac-comment);
+}
+
+.form-control[readonly] {
+  background-color: #1e1f29;
+  color: var(--drac-fg);
+}
+
+.form-label {
+  color: var(--drac-fg);
+}
+
+.form-text {
+  color: var(--drac-comment);
+}
+
+.invalid-feedback {
+  color: var(--drac-red);
+}
+
+/* ── Input group ─────────────────────────────────────────────────────── */
+.input-group-text {
+  background-color: var(--drac-surface);
+  border-color: var(--drac-surface);
+  color: var(--drac-fg);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+.btn-primary {
+  background-color: var(--drac-purple);
+  border-color: var(--drac-purple);
+  color: var(--drac-bg);
+  font-weight: 600;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: #a47de8;
+  border-color: #a47de8;
+  color: var(--drac-bg);
+}
+
+.btn-primary:disabled {
+  background-color: var(--drac-surface);
+  border-color: var(--drac-surface);
+  color: var(--drac-comment);
+}
+
+.btn-outline-secondary {
+  color: var(--drac-comment);
+  border-color: var(--drac-surface);
+}
+
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus {
+  background-color: var(--drac-surface);
+  border-color: var(--drac-surface);
+  color: var(--drac-fg);
+}
+
+/* Clipboard button — transitions to green when copied */
+#btn-copy {
+  min-width: 6rem;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+#btn-copy.copied {
+  background-color: rgba(80, 250, 123, 0.15);
+  border-color: var(--drac-green);
+  color: var(--drac-green);
+}
+
+/* ── Alerts ──────────────────────────────────────────────────────────── */
+.alert-success {
+  background-color: rgba(80, 250, 123, 0.12);
+  border-color: rgba(80, 250, 123, 0.4);
+  color: var(--drac-green);
+}
+
+.alert-danger {
+  background-color: rgba(255, 85, 85, 0.12);
+  border-color: rgba(255, 85, 85, 0.4);
+  color: var(--drac-red);
+}
+
+.alert-warning {
+  background-color: rgba(241, 250, 140, 0.12);
+  border-color: rgba(241, 250, 140, 0.4);
+  color: var(--drac-yellow);
+}
+
+.btn-close {
+  filter: invert(1) grayscale(1);
+}
+
+/* ── Progress bar ────────────────────────────────────────────────────── */
+.progress {
+  background-color: var(--drac-surface);
+}
+
+.progress-bar.bg-danger  { background-color: var(--drac-red)    !important; }
+.progress-bar.bg-warning { background-color: var(--drac-yellow) !important; color: var(--drac-bg) !important; }
+.progress-bar.bg-info    { background-color: var(--drac-cyan)   !important; color: var(--drac-bg) !important; }
+.progress-bar.bg-success { background-color: var(--drac-green)  !important; color: var(--drac-bg) !important; }
+
+/* ── Strength label colours ──────────────────────────────────────────── */
+.text-danger  { color: var(--drac-red)     !important; }
+.text-warning { color: var(--drac-yellow)  !important; }
+.text-info    { color: var(--drac-cyan)    !important; }
+.text-success { color: var(--drac-green)   !important; }
+.text-muted   { color: var(--drac-comment) !important; }
+.text-primary { color: var(--drac-purple)  !important; }
+
+/* ── Table ───────────────────────────────────────────────────────────── */
+.table {
+  --bs-table-color:       var(--drac-fg);
+  --bs-table-hover-color: var(--drac-fg);
+  --bs-table-hover-bg:    rgba(68, 71, 90, 0.4);
+  --bs-table-border-color: var(--drac-surface);
+  font-size: 0.9rem;
+}
+
+.table thead th {
+  background-color: var(--drac-surface);
+  color: var(--drac-comment);
+  border-color: var(--drac-comment);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Toast ───────────────────────────────────────────────────────────── */
+.toast {
+  background-color: #21222c;
+  border-color: var(--drac-green);
+}
+
+.toast-header {
+  background-color: #21222c;
+  color: var(--drac-green);
+  border-bottom-color: var(--drac-surface);
+}
+
+.toast-body {
+  color: var(--drac-fg);
+}
+
+/* ── Monospace password ──────────────────────────────────────────────── */
+.font-monospace {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  letter-spacing: 0.05em;
+}
+
+/* ── Saved password mask ─────────────────────────────────────────────── */
+.pw-mask {
+  cursor: pointer;
+  color: var(--drac-comment);
+  letter-spacing: 0.15em;
+  border-radius: 3px;
+  padding: 1px 6px;
+  transition: background-color 0.15s ease, color 0.15s ease, letter-spacing 0.1s ease;
+  user-select: none;
+}
+
+.pw-mask:hover {
+  background-color: rgba(68, 71, 90, 0.5);
+  color: var(--drac-fg);
+  letter-spacing: 0.05em;
+  user-select: text;
+}
+
+.pw-mask.pw-copied {
+  background-color: rgba(80, 250, 123, 0.15);
+  color: var(--drac-green);
+}
+
+/* ── Entry row fade-in ───────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+#entries-area tbody tr {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* ── Auth page: nav-tabs (Dracula) ───────────────────────────────────── */
+.nav-tabs {
+  border-bottom-color: var(--drac-surface);
+}
+
+.nav-tabs .nav-link {
+  color: var(--drac-comment);
+  border-color: transparent;
+  background-color: transparent;
+}
+
+.nav-tabs .nav-link:hover,
+.nav-tabs .nav-link:focus {
+  color: var(--drac-fg);
+  border-color: var(--drac-surface) var(--drac-surface) transparent;
+  background-color: rgba(68, 71, 90, 0.3);
+}
+
+.nav-tabs .nav-link.active {
+  color: var(--drac-purple);
+  background-color: #21222c;
+  border-color: var(--drac-surface) var(--drac-surface) #21222c;
+}
