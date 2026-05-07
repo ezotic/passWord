@@ -15,6 +15,26 @@ if (!_token) {
 
 const API_BASE = '/api/passwords';
 
+// Auto-logout after 2 minutes of inactivity
+const LOGOUT_TIMEOUT_MS = 2 * 60 * 1000;
+let _inactivityTimer = setTimeout(doInactivityLogout, LOGOUT_TIMEOUT_MS);
+
+function doInactivityLogout() {
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('auth_username');
+  localStorage.removeItem('auth_isAdmin');
+  window.location.replace('login.html?timeout=1');
+}
+
+function resetInactivityTimer() {
+  clearTimeout(_inactivityTimer);
+  _inactivityTimer = setTimeout(doInactivityLogout, LOGOUT_TIMEOUT_MS);
+}
+
+['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'].forEach(evt =>
+  document.addEventListener(evt, resetInactivityTimer, { passive: true })
+);
+
 function authFetch(url, options) {
   const token = localStorage.getItem('auth_token');
   const headers = Object.assign({}, options && options.headers, {

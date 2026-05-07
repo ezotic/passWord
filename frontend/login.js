@@ -5,14 +5,30 @@ if (localStorage.getItem('auth_token')) {
   window.location.replace('index.html');
 }
 
+const _params = new URLSearchParams(window.location.search);
+
 // Show "password changed" banner when redirected back from change-password page
-if (new URLSearchParams(window.location.search).get('changed') === '1') {
+if (_params.get('changed') === '1') {
   document.addEventListener('DOMContentLoaded', () => {
     const area = document.getElementById('login-alert');
     if (area) {
       area.innerHTML = `
         <div class="alert alert-success alert-dismissible fade show" role="alert">
           Password changed successfully. Please log in with your new password.
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+    }
+  });
+}
+
+// Show "session timed out" banner when auto-logged out due to inactivity
+if (_params.get('timeout') === '1') {
+  document.addEventListener('DOMContentLoaded', () => {
+    const area = document.getElementById('login-alert');
+    if (area) {
+      area.innerHTML = `
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+          You were logged out due to 2 minutes of inactivity.
           <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>`;
     }
