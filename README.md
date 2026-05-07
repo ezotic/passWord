@@ -21,46 +21,24 @@ A self-hosted, encrypted password manager with per-user vaults, admin controls, 
 
 ### Container Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                          Host Machine                           │
-│                                                                 │
-│   Browser ──── :8080 ──────────────────────────────────────┐   │
-│                                                             │   │
-│  ┌──────────────────── frontend-net ────────────────────┐  │   │
-│  │                                                       │  │   │
-│  │   ┌─────────────────────────────────────────────┐    │  │   │
-│  │   │           nginx:1.27-alpine                 │◄───┘  │   │
-│  │   │                                             │       │   │
-│  │   │  • Serves static files (HTML/CSS/JS)        │       │   │
-│  │   │  • Proxies /api/* → backend:3000            │       │   │
-│  │   │  • Adds security headers (CSP, X-Frame…)   │       │   │
-│  │   └────────────────────┬────────────────────────┘       │   │
-│  │                        │                                 │   │
-│  └────────────────────────┼─────────────────────────────────┘  │
-│                           │                                     │
-│  ┌──────────────────── backend-net (internal) ──────────────┐  │
-│  │                        │                                  │  │
-│  │   ┌────────────────────▼────────────────────────────┐    │  │
-│  │   │           Node.js 20 / Express 4                │    │  │
-│  │   │                                                  │    │  │
-│  │   │  • JWT auth middleware                           │    │  │
-│  │   │  • bcrypt password hashing (12 rounds)          │    │  │
-│  │   │  • AES-256-GCM encryption for vault entries     │    │  │
-│  │   │  • Rate limiting (auth: 10/15min, write: 20/15min)│  │  │
-│  │   │  • Auto-seeds default admin on first start       │    │  │
-│  │   └────────────────────┬────────────────────────────┘    │  │
-│  │                        │                                  │  │
-│  │   ┌────────────────────▼────────────────────────────┐    │  │
-│  │   │              MariaDB LTS                        │    │  │
-│  │   │                                                  │    │  │
-│  │   │  • app_users  — login credentials               │    │  │
-│  │   │  • users      — encrypted password entries      │    │  │
-│  │   │  • Volume: mysql_data (persistent)              │    │  │
-│  │   └─────────────────────────────────────────────────┘    │  │
-│  │                                                           │  │
-│  └───────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Browser(["🌐 Browser"])
+
+    subgraph host["Host Machine"]
+        subgraph frontend["frontend-net"]
+            Nginx["nginx:1.27-alpine\n─────────────────\n• Serves static files HTML/CSS/JS\n• Proxies /api/* → backend:3000\n• Security headers CSP, X-Frame-Options"]
+        end
+
+        subgraph backend_net["backend-net  (internal — no internet access)"]
+            Backend["Node.js 20 / Express 4\n─────────────────\n• JWT auth middleware\n• bcrypt hashing 12 rounds\n• AES-256-GCM vault encryption\n• Rate limiting auth:10/15min write:20/15min\n• Auto-seeds default admin on first start"]
+            DB[("MariaDB LTS\n─────────────────\n• app_users — login credentials\n• users — encrypted vault entries\n• Volume: mysql_data persistent")]
+        end
+    end
+
+    Browser -->|"HTTP :8080"| Nginx
+    Nginx -->|"/api/* → :3000"| Backend
+    Backend -->|"SQL queries"| DB
 ```
 
 > `backend-net` is marked `internal: true` — the backend and database have no direct internet access. Only Nginx is exposed to the host.
