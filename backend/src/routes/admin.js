@@ -48,4 +48,76 @@ router.delete('/users/:id', async (req, res) => {
   }
 });
 
+// GET /api/admin/backup — stream a SQL dump of all tables as a downloadable file
+router.get('/backup', async (req, res) => {
+  const TABLES = ['app_users', 'users'];
+
+  function escapeStr(val) {
+    return val
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/\0/g, '\\0')
+      .replace(/\n/g, '\\n')
+      .replace(/\r/g, '\\r')
+      .replace(/\x1a/g, '\\Z');
+  }
+
+  function fmtDate(d) {
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())} ` +
+           `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`;
+  }
+
+  function sqlVal(val) {
+    if (val === null || val === undefined) return 'NULL';
+    if (Buffer.isBuffer(val)) return `0x${val.toString('hex')}`;
+    if (val instanceof Date) return `'${escapeStr(fmtDate(val))}'`;
+    if (typeof val === 'number' || typeof val === 'bigint') return String(val);
+    return `'${escapeStr(String(val))}'`;
+  }
+
+  try {
+    const lines = [
+      '-- passWORD database backup',
+      `-- Generated: ${new Date().toISOString()}`,
+      '',
+      'SET FOREIGN_KEY_CHECKS=0;',
+      'SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";',
+      '',
+    ];
+
+    for (const table of TABLES) {
+      const [[ddlRow]] = await pool.execute(`SHOW CREATE TABLE \`${table}\``);
+      lines.push(
+        `-- Table: ${table}`,
+        `DROP TABLE IF EXISTS \`${table}\`;`,
+        ddlRow['Create Table'] + ';',
+        ''
+      );
+
+      const [rows] = await pool.execute(`SELECT * FROM \`${table}\``);
+      if (rows.length) {
+        const cols = Object.keys(rows[0]).map(c => `\`${c}\``).join(', ');
+        for (const row of rows) {
+          const vals = Object.values(row).map(sqlVal).join(', ');
+          lines.push(`INSERT INTO \`${table}\` (${cols}) VALUES (${vals});`);
+        }
+      }
+      lines.push('');
+    }
+
+    lines.push('SET FOREIGN_KEY_CHECKS=1;', '');
+
+    const sql = lines.join('\n');
+    const ts  = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="backup-${ts}.sql"`);
+    res.setHeader('Content-Length', Buffer.byteLength(sql, 'utf8'));
+    return res.send(sql);
+  } catch (err) {
+    console.error('[GET /api/admin/backup]', err.message);
+    return res.status(500).json({ error: 'Backup failed.' });
+  }
+});
+
 module.exports = router;

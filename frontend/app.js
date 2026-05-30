@@ -293,6 +293,51 @@ if (isAdminUser) {
   });
 
   loadUsers();
+
+  const btnBackup     = document.getElementById('btn-backup');
+  const backupSpinner = document.getElementById('backup-spinner');
+  const backupIcon    = document.getElementById('backup-icon');
+  const backupErrorEl = document.getElementById('backup-error');
+
+  btnBackup?.addEventListener('click', async () => {
+    backupErrorEl.classList.add('d-none');
+    backupErrorEl.textContent = '';
+    btnBackup.disabled = true;
+    backupSpinner.classList.remove('d-none');
+    backupIcon.classList.add('d-none');
+    try {
+      const res = await authFetch('/api/admin/backup');
+      if (res.status === 401) { handleUnauthorized(); return; }
+      if (res.status === 429) {
+        backupErrorEl.textContent = 'Too many backup requests. Please wait and try again.';
+        backupErrorEl.classList.remove('d-none');
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        backupErrorEl.textContent = data.error || `Backup failed (${res.status}).`;
+        backupErrorEl.classList.remove('d-none');
+        return;
+      }
+      let filename = `backup-${new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-')}.sql`;
+      const cd = res.headers.get('Content-Disposition');
+      if (cd) { const m = cd.match(/filename="([^"]+)"/); if (m) filename = m[1]; }
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = Object.assign(document.createElement('a'), { href: url, download: filename });
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      backupErrorEl.textContent = `Network error: ${escapeHtml(err.message)}`;
+      backupErrorEl.classList.remove('d-none');
+    } finally {
+      btnBackup.disabled = false;
+      backupSpinner.classList.add('d-none');
+      backupIcon.classList.remove('d-none');
+    }
+  });
 }
 
 async function loadEntries() {

@@ -49,10 +49,19 @@ const authLimiter = rateLimit({
   skipSuccessfulRequests: true,
 });
 
+const backupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many backup requests, please try again later.' },
+});
+
 // Auth routes (public — no authenticate middleware)
 app.use('/api/auth', authLimiter, authRouter);
 
 // Admin-only routes
+app.get('/api/admin/backup', authenticate, requireAdmin, backupLimiter);
 app.use('/api/admin', authenticate, requireAdmin, adminRouter);
 
 // Protected password routes
