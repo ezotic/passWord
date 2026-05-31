@@ -152,6 +152,26 @@ created_at    TIMESTAMP            created_at    TIMESTAMP
 - Docker Engine 24+
 - Docker Compose v2
 
+#### Install Docker
+
+**Linux (Debian / Ubuntu)**
+```bash
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER   # log out and back in after this
+```
+
+**macOS**
+Download and install [Docker Desktop](https://www.docker.com/products/docker-desktop/). Docker Compose is bundled.
+
+**Windows**
+Download and install [Docker Desktop](https://www.docker.com/products/docker-desktop/). Enable WSL 2 backend when prompted. Docker Compose is bundled.
+
+Verify the installation:
+```bash
+docker --version          # Docker version 24.x or later
+docker compose version    # Docker Compose version v2.x or later
+```
+
 ### 1 — Clone and configure
 
 ```bash
