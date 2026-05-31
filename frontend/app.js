@@ -53,7 +53,7 @@ const CHARSET = {
   upper:   'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
   lower:   'abcdefghijklmnopqrstuvwxyz',
   digits:  '0123456789',
-  special: '!@#$%^&*()-_=+[]{}|;:,.<>?',
+  special: '!@#$%^*()-_=+[]{}|:,.?',
 };
 const ALL_CHARS = CHARSET.upper + CHARSET.lower + CHARSET.digits + CHARSET.special;
 const PASSWORD_LENGTH = 20;
