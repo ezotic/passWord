@@ -8,10 +8,17 @@ A self-hosted, encrypted password manager with per-user vaults, admin controls, 
 
 - **Encrypted storage** — passwords at rest are encrypted with AES-256-GCM
 - **Per-user vaults** — each user sees only their own saved entries
-- **JWT authentication** — stateless, 8-hour sessions
-- **Admin panel** — admins can view and delete registered users
-- **Forced password change** — default admin must set a new password on first login
-- **Password generator** — cryptographically random passwords with strength meter
+- **JWT authentication** — stateless, 8-hour sessions with automatic inactivity logout after 2 minutes
+- **Password generator** — cryptographically random 20-character passwords with strength meter
+- **Forgot password** — users can reset their own password from the login page (no email required; requires knowing the username)
+- **Admin panel** — admins can manage all registered users:
+  - View all accounts with join date
+  - Delete any user (cascades to their vault entries)
+  - Force a user to change their password on next login
+  - Download a full SQL backup of the database
+  - Restore a previously downloaded SQL backup
+- **Forced password change** — default admin and any admin-reset accounts must set a new password before accessing the app
+- **Emergency admin reset** — `reset-admin-password.sh` script to recover the admin account from the host when the UI is inaccessible
 - **Rate limiting** — brute-force protection on all auth and write endpoints
 - **Security headers** — CSP, X-Frame-Options, X-Content-Type-Options via Nginx + Helmet
 
@@ -67,12 +74,16 @@ Nginx (nginx:1.27-alpine)
                               │
                               ├── POST /api/auth/login
                               ├── POST /api/auth/register
+                              ├── POST /api/auth/reset-password
                               ├── POST /api/auth/change-password  [JWT required]
                               ├── GET  /api/passwords             [JWT required]
                               ├── POST /api/passwords             [JWT required]
                               ├── DELETE /api/passwords/:id       [JWT required]
                               ├── GET  /api/admin/users           [JWT + admin]
-                              └── DELETE /api/admin/users/:id     [JWT + admin]
+                              ├── DELETE /api/admin/users/:id     [JWT + admin]
+                              ├── POST /api/admin/users/:id/reset-password  [JWT + admin]
+                              ├── GET  /api/admin/backup          [JWT + admin]
+                              └── POST /api/admin/restore         [JWT + admin]
 ```
 
 ### Database Schema
@@ -184,7 +195,7 @@ Copy `.env.example` to `.env` and fill in all values before starting.
 
 | Variable | Description | Example |
 |---|---|---|
-| `MYSQL_ROOT_PASSWORD` | MariaDB root password (used by MariaDB init only) | `ch@ngeMe_r00t!` |
+| `MYSQL_ROOT_PASSWORD` | MariaDB root password (also used by the restore route) | `ch@ngeMe_r00t!` |
 | `MYSQL_DATABASE` | Database name | `password_app` |
 | `MYSQL_USER` | Application DB user | `appuser` |
 | `MYSQL_PASSWORD` | Application DB password | `ch@ngeMe_app!` |
@@ -206,12 +217,14 @@ openssl rand -hex 32   # for JWT_SECRET
 ```
 passWord/
 ├── frontend/                  # Static files served by Nginx
-│   ├── index.html             # Main password manager UI
+│   ├── index.html             # Main app UI (vault + admin panel)
 │   ├── login.html             # Login / Register page
 │   ├── change-password.html   # Forced password change page
-│   ├── app.js                 # Main app logic (CRUD, password generation)
+│   ├── forgot-password.html   # Self-service password reset page
+│   ├── app.js                 # Main app logic (CRUD, password generation, admin panel)
 │   ├── login.js               # Login / register logic
 │   ├── change-password.js     # Password change logic
+│   ├── forgot-password.js     # Password reset logic
 │   └── style.css              # Dracula dark theme (Bootstrap 5 overrides)
 │
 ├── backend/
@@ -223,8 +236,8 @@ passWord/
 │   │   │   ├── authenticate.js   # JWT verification → req.user
 │   │   │   └── requireAdmin.js   # Admin-only guard
 │   │   └── routes/
-│   │       ├── auth.js           # login, register, change-password
-│   │       ├── admin.js          # list/delete users
+│   │       ├── auth.js           # login, register, change-password, reset-password
+│   │       ├── admin.js          # user management, backup, restore
 │   │       └── passwords.js      # CRUD for vault entries
 │   ├── Dockerfile             # Multi-stage build (node:20-alpine)
 │   └── package.json
@@ -236,10 +249,57 @@ passWord/
 ├── nginx/
 │   └── default.conf           # Reverse proxy + security headers
 │
+├── reset-admin-password.sh    # Emergency CLI script to reset the admin password
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
 ```
+
+---
+
+## Admin Panel
+
+The admin panel is visible only to users with `is_admin = 1`. It replaces the standard vault UI for admin accounts.
+
+### User Management
+
+Each registered user appears in a table with their ID, username, join date, and two action buttons:
+
+| Button | Action |
+|---|---|
+| Key icon (yellow) | Sets `must_change_password = 1` — user is redirected to the change-password page on their next login |
+| Person-X icon (red) | Permanently deletes the user and all their saved vault entries (irreversible) |
+
+Admins cannot delete or reset-password their own account from this panel.
+
+### Database Backup
+
+Click **Backup** to download a full SQL dump (`backup-<timestamp>.sql`) containing both the `app_users` and `users` tables. Rate-limited to 5 downloads per 15 minutes.
+
+### Database Restore
+
+Click **Choose…** to select a previously downloaded `.sql` backup file, then click **Restore** and confirm. This replays the full SQL dump against the live database — all current users and vault entries are overwritten. Rate-limited to 3 restores per 15 minutes.
+
+> Only files generated by this application's backup feature are accepted. The restore route validates the file header before executing anything.
+
+---
+
+## Emergency Admin Reset
+
+If the admin account password is lost and the UI is inaccessible, use the bundled shell script from the project root on the Docker host:
+
+```bash
+./reset-admin-password.sh
+# or for a different admin username:
+./reset-admin-password.sh someadmin
+```
+
+The script:
+1. Prompts for a new password (same complexity rules as the UI)
+2. Generates the bcrypt hash inside the running backend container (no host-side dependencies)
+3. Updates the database and sets `must_change_password = 1`
+
+The backend and database services must be running (`docker compose up -d`).
 
 ---
 
@@ -253,7 +313,8 @@ All `/api/passwords` and `/api/admin` endpoints require `Authorization: Bearer <
 |---|---|---|---|
 | `POST` | `/api/auth/register` | `{ username, password }` | `201` or `409` / `422` |
 | `POST` | `/api/auth/login` | `{ username, password }` | `200 { token, username, isAdmin, mustChangePassword }` |
-| `POST` | `/api/auth/change-password` | `{ currentPassword, password }` | `200` or `401` / `422` |
+| `POST` | `/api/auth/reset-password` | `{ username, password }` | `200` or `404` / `422` |
+| `POST` | `/api/auth/change-password` | `{ currentPassword, password }` | `200` or `401` / `422` — requires JWT |
 
 ### Vault (JWT required)
 
@@ -269,6 +330,17 @@ All `/api/passwords` and `/api/admin` endpoints require `Authorization: Bearer <
 |---|---|---|
 | `GET` | `/api/admin/users` | List all registered users |
 | `DELETE` | `/api/admin/users/:id` | Delete a user and all their entries |
+| `POST` | `/api/admin/users/:id/reset-password` | Force user to change password on next login |
+| `GET` | `/api/admin/backup` | Download a full SQL dump (rate-limited: 5 / 15 min) |
+| `POST` | `/api/admin/restore` | Restore a SQL backup file (rate-limited: 3 / 15 min) |
+
+### Password Rules (register, change-password, reset-password)
+
+- 12–20 characters
+- At least one lowercase letter
+- At least one uppercase letter
+- At least one number
+- At least one special character
 
 ---
 
@@ -281,12 +353,15 @@ All `/api/passwords` and `/api/admin` endpoints require `Authorization: Bearer <
 | Username enumeration via timing | Constant-time dummy bcrypt compare when user not found |
 | JWT algorithm confusion | `algorithms: ['HS256']` pinned in `jwt.verify` |
 | Brute force | 10 failed auth attempts per IP per 15 min (`skipSuccessfulRequests: true`) |
+| Session inactivity | Client-side auto-logout after 2 minutes of inactivity |
 | Clickjacking | `X-Frame-Options: SAMEORIGIN` |
 | MIME sniffing | `X-Content-Type-Options: nosniff` |
 | XSS via CDN | CSP restricts scripts/styles to `self` + `cdn.jsdelivr.net` |
 | DB network exposure | `backend-net` is Docker-internal; MariaDB not reachable from host |
 | Container privilege | Backend runs as non-root `appuser` inside the container |
 | Self-deletion by admin | Server rejects `DELETE /api/admin/users/<own-id>` with 400 |
+| Backup restore abuse | Restore endpoint rate-limited (3/15 min); only accepts files with the application's backup header |
+| Restore privilege | Restore uses a root DB connection scoped to a single transaction — `MYSQL_ROOT_PASSWORD` required in `.env` |
 
 ---
 

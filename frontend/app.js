@@ -204,8 +204,10 @@ const btnConfirmDelUser = document.getElementById('btn-confirm-delete-user');
 const deleteUserErrorEl = document.getElementById('delete-user-error');
 const deleteUserSpinner = document.getElementById('delete-user-spinner');
 
-let deleteUserModal  = null;
+let deleteUserModal     = null;
 let pendingDeleteUserId = null;
+let resetPwModal        = null;
+let pendingResetPwUserId = null;
 
 async function loadUsers() {
   if (!isAdminUser || !usersArea) return;
@@ -228,7 +230,12 @@ async function loadUsers() {
         <td class="text-muted">${escapeHtml(u.id)}</td>
         <td class="fw-semibold">${escapeHtml(u.username)}${u.isAdmin ? ' <span class="badge" style="background:rgba(189,147,249,0.2);color:var(--drac-purple);font-size:0.7rem;">admin</span>' : ''}</td>
         <td class="text-muted small text-nowrap">${escapeHtml(formatDate(u.createdAt))}</td>
-        <td>
+        <td class="text-nowrap">
+          <button class="btn btn-sm btn-outline-warning btn-reset-pw me-1"
+            data-id="${escapeHtml(u.id)}" data-username="${escapeHtml(u.username)}"
+            ${u.id === myId ? 'disabled title="Cannot reset your own password"' : 'title="Force password change"'}>
+            <i class="bi bi-key"></i>
+          </button>
           <button class="btn btn-sm btn-outline-danger btn-delete-user"
             data-id="${escapeHtml(u.id)}" data-username="${escapeHtml(u.username)}"
             ${u.id === myId ? 'disabled title="Cannot delete your own account"' : 'title="Delete user"'}>
@@ -255,14 +262,27 @@ if (isAdminUser) {
   btnRefreshUsers?.addEventListener('click', loadUsers);
 
   document.getElementById('users-area')?.addEventListener('click', e => {
-    const btn = e.target.closest('.btn-delete-user');
-    if (!btn || btn.disabled) return;
-    pendingDeleteUserId = btn.dataset.id;
-    deleteUserNameEl.textContent = btn.dataset.username;
-    deleteUserErrorEl.classList.add('d-none');
-    deleteUserErrorEl.textContent = '';
-    if (!deleteUserModal) deleteUserModal = new bootstrap.Modal(deleteUserModalEl);
-    deleteUserModal.show();
+    const deleteBtn = e.target.closest('.btn-delete-user');
+    if (deleteBtn && !deleteBtn.disabled) {
+      pendingDeleteUserId = deleteBtn.dataset.id;
+      deleteUserNameEl.textContent = deleteBtn.dataset.username;
+      deleteUserErrorEl.classList.add('d-none');
+      deleteUserErrorEl.textContent = '';
+      if (!deleteUserModal) deleteUserModal = new bootstrap.Modal(deleteUserModalEl);
+      deleteUserModal.show();
+      return;
+    }
+
+    const resetBtn = e.target.closest('.btn-reset-pw');
+    if (resetBtn && !resetBtn.disabled) {
+      pendingResetPwUserId = resetBtn.dataset.id;
+      document.getElementById('reset-pw-user-name').textContent = resetBtn.dataset.username;
+      const resetPwErrorEl = document.getElementById('reset-pw-error');
+      resetPwErrorEl.classList.add('d-none');
+      resetPwErrorEl.textContent = '';
+      if (!resetPwModal) resetPwModal = new bootstrap.Modal(document.getElementById('resetPasswordModal'));
+      resetPwModal.show();
+    }
   });
 
   btnConfirmDelUser?.addEventListener('click', async () => {
@@ -298,6 +318,102 @@ if (isAdminUser) {
   const backupSpinner = document.getElementById('backup-spinner');
   const backupIcon    = document.getElementById('backup-icon');
   const backupErrorEl = document.getElementById('backup-error');
+
+  // Reset password confirm
+  document.getElementById('btn-confirm-reset-pw')?.addEventListener('click', async () => {
+    if (!pendingResetPwUserId) return;
+    const resetPwErrorEl  = document.getElementById('reset-pw-error');
+    const resetPwSpinner  = document.getElementById('reset-pw-spinner');
+    const btnConfirmResetPw = document.getElementById('btn-confirm-reset-pw');
+    resetPwErrorEl.classList.add('d-none');
+    btnConfirmResetPw.disabled = true;
+    resetPwSpinner.classList.remove('d-none');
+    try {
+      const res = await authFetch(`/api/admin/users/${pendingResetPwUserId}/reset-password`, { method: 'POST' });
+      if (res.status === 401) { handleUnauthorized(); return; }
+      const data = await res.json();
+      if (res.ok) {
+        resetPwModal.hide();
+      } else {
+        resetPwErrorEl.textContent = data.error || 'Failed to reset password.';
+        resetPwErrorEl.classList.remove('d-none');
+      }
+    } catch (err) {
+      resetPwErrorEl.textContent = `Network error: ${err.message}`;
+      resetPwErrorEl.classList.remove('d-none');
+    } finally {
+      btnConfirmResetPw.disabled = false;
+      resetPwSpinner.classList.add('d-none');
+    }
+  });
+
+  // Restore backup
+  let restoreFile  = null;
+  let restoreModal = null;
+  const restoreFileInput  = document.getElementById('restore-file-input');
+  const restoreFilenameEl = document.getElementById('restore-filename');
+  const btnRestoreUpload  = document.getElementById('btn-restore-upload');
+  const restoreErrorEl    = document.getElementById('restore-error');
+  const restoreSuccessEl  = document.getElementById('restore-success');
+
+  restoreFileInput?.addEventListener('change', () => {
+    restoreFile = restoreFileInput.files[0] || null;
+    restoreErrorEl.classList.add('d-none');
+    restoreSuccessEl.classList.add('d-none');
+    if (restoreFile) {
+      restoreFilenameEl.textContent = restoreFile.name;
+      restoreFilenameEl.classList.remove('d-none');
+      btnRestoreUpload.disabled = false;
+    } else {
+      restoreFilenameEl.classList.add('d-none');
+      btnRestoreUpload.disabled = true;
+    }
+  });
+
+  btnRestoreUpload?.addEventListener('click', () => {
+    if (!restoreFile) return;
+    document.getElementById('restore-modal-filename').textContent = restoreFile.name;
+    if (!restoreModal) restoreModal = new bootstrap.Modal(document.getElementById('restoreModal'));
+    restoreModal.show();
+  });
+
+  document.getElementById('btn-confirm-restore')?.addEventListener('click', async () => {
+    if (!restoreFile) return;
+    const confirmRestoreSpinner = document.getElementById('confirm-restore-spinner');
+    const btnConfirmRestore     = document.getElementById('btn-confirm-restore');
+    btnConfirmRestore.disabled = true;
+    confirmRestoreSpinner.classList.remove('d-none');
+    try {
+      const sql = await restoreFile.text();
+      const res = await authFetch('/api/admin/restore', {
+        method:  'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body:    sql,
+      });
+      if (res.status === 401) { handleUnauthorized(); return; }
+      const data = await res.json();
+      restoreModal.hide();
+      if (res.ok) {
+        restoreSuccessEl.textContent = data.message || 'Backup restored successfully.';
+        restoreSuccessEl.classList.remove('d-none');
+        restoreFile = null;
+        restoreFileInput.value = '';
+        restoreFilenameEl.classList.add('d-none');
+        btnRestoreUpload.disabled = true;
+        loadUsers();
+      } else {
+        restoreErrorEl.textContent = data.error || `Restore failed (${res.status}).`;
+        restoreErrorEl.classList.remove('d-none');
+      }
+    } catch (err) {
+      restoreModal.hide();
+      restoreErrorEl.textContent = `Network error: ${escapeHtml(err.message)}`;
+      restoreErrorEl.classList.remove('d-none');
+    } finally {
+      btnConfirmRestore.disabled = false;
+      confirmRestoreSpinner.classList.add('d-none');
+    }
+  });
 
   btnBackup?.addEventListener('click', async () => {
     backupErrorEl.classList.add('d-none');

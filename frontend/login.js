@@ -35,6 +35,20 @@ if (_params.get('timeout') === '1') {
   });
 }
 
+// Show "password reset" banner when redirected back from forgot-password page
+if (_params.get('reset') === '1') {
+  document.addEventListener('DOMContentLoaded', () => {
+    const area = document.getElementById('login-alert');
+    if (area) {
+      area.innerHTML = `
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          Password reset successfully. Please log in with your new password.
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+    }
+  });
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function escapeHtml(str) {

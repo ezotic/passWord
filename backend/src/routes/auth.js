@@ -39,6 +39,15 @@ const changePasswordRules = [
   ...passwordRules,
 ];
 
+const resetPasswordRules = [
+  body('username')
+    .trim()
+    .notEmpty()                     .withMessage('Username is required.')
+    .isLength({ min: 3, max: 64 })  .withMessage('Username must be 3–64 characters.')
+    .matches(/^[a-zA-Z0-9_\-.]+$/) .withMessage('Username: letters, numbers, _ - . only.'),
+  ...passwordRules,
+];
+
 // POST /api/auth/register
 router.post('/register', registerRules, async (req, res) => {
   const errors = validationResult(req);
@@ -142,6 +151,36 @@ router.post('/change-password', authenticate, changePasswordRules, async (req, r
     return res.json({ message: 'Password updated successfully.' });
   } catch (err) {
     console.error('[POST /api/auth/change-password]', err.message);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// POST /api/auth/reset-password — unauthenticated; covered by authLimiter in server.js
+router.post('/reset-password', resetPasswordRules, async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+
+  const { username, password: newPassword } = req.body;
+
+  try {
+    const [rows] = await pool.execute(
+      'SELECT id FROM app_users WHERE username = ?', [username]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Username not found.' });
+    }
+
+    const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await pool.execute(
+      'UPDATE app_users SET password_hash = ?, must_change_password = 0 WHERE id = ?',
+      [newHash, rows[0].id]
+    );
+
+    return res.json({ message: 'Password reset successfully.' });
+  } catch (err) {
+    console.error('[POST /api/auth/reset-password]', err.message);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 });
