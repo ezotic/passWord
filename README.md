@@ -309,6 +309,8 @@ Click **Choose…** to select a previously downloaded `.sql` backup file, then c
 If the admin account password is lost and the UI is inaccessible, use the bundled shell script from the project root on the Docker host:
 
 ```bash
+Linux
+
 ./reset-admin-password.sh
 # or for a different admin username:
 ./reset-admin-password.sh someadmin
