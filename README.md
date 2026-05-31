@@ -306,14 +306,20 @@ Click **Choose…** to select a previously downloaded `.sql` backup file, then c
 
 ## Emergency Admin Reset
 
-If the admin account password is lost and the UI is inaccessible, use the bundled shell script from the project root on the Docker host:
+If the admin account password is lost and the UI is inaccessible, use the bundled script from the project root on the Docker host.
 
+**Linux / macOS**
 ```bash
-Linux
-
 ./reset-admin-password.sh
 # or for a different admin username:
 ./reset-admin-password.sh someadmin
+```
+
+**Windows (PowerShell)**
+```powershell
+.\reset-admin-password.ps1
+# or for a different admin username:
+.\reset-admin-password.ps1 someadmin
 ```
 
 The script:
